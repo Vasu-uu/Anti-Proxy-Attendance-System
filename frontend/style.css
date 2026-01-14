@@ -1,0 +1,103 @@
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f7f9fc;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+/* LEFT PANEL */
+.left-panel {
+  width: 50%;
+  background-image: url("login img.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  display: flex;
+  align-items: flex-end;
+  padding: 40px;
+}
+
+
+.welcome-box {
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 400px;
+}
+
+/* RIGHT PANEL */
+.right-panel {
+  width: 50%;
+  padding: 50px;
+  background: white;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header a {
+  text-decoration: none;
+  color: #1a73e8;
+}
+
+.subtitle {
+  color: #666;
+  margin-bottom: 30px;
+}
+
+label {
+  display: block;
+  margin-top: 15px;
+  font-weight: bold;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin-top: 5px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.forgot {
+  text-align: right;
+  margin-top: 8px;
+}
+
+.forgot a {
+  font-size: 14px;
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 25px;
+  background: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1558b0;
+}
+
+.footer-text {
+  marg

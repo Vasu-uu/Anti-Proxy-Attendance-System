@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Attendance App - Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- LEFT SIDE (Image + Text) -->
+    <div class="left-panel">
+      <div class="welcome-box">
+        <h2>Welcome to Saintgits!</h2>
+        <p>
+          Access your student dashboard and stay updated with your
+          attendance records across all departments.
+        </p>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE (Login Form) -->
+    <div class="right-panel">
+
+      <div class="header">
+        <h3>🎓 Attendance App</h3>
+        <a href="#">Help Center</a>
+      </div>
+
+      <h1>View Your Attendance</h1>
+      <p class="subtitle">
+        Enter your credentials to access your dashboard and track your academic progress.
+      </p>
+
+      <!-- Role Selection -->
+      <label>Login As</label>
+      <select id="role">
+        <option value="">Select Role</option>
+        <option value="student">Student</option>
+        <option value="faculty">Faculty</option>
+      </select>
+
+      <label>Username</label>
+      <input type="text" placeholder="e.g. john_doe">
+
+      <label>Password</label>
+      <input type="password" placeholder="••••••••">
+
+      <div class="forgot">
+        <a href="#">Forgot Password?</a>
+      </div>
+
+      <button onclick="login()">Sign In →</button>
+
+      <p class="footer-text">
+        Don't have an account?
+        <span>Contact your administrator</span>
+      </p>
+
+    </div>
+  </div>
+
+  <script src="navigation.js"></script>
+</body>
+</html>
