@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teacher Timetable</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .subject { font-weight: 600; color: var(--text-main); }
+    .class-info { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .free { color: var(--text-muted); text-align: center; font-style: italic; }
+    .suspended { background-color: #FEE2E2 !important; }
+    .suspended .subject { color: var(--danger); text-decoration: line-through; }
+    .suspended .class-info { color: var(--danger); opacity: 0.8; }
+    .table td { vertical-align: middle; padding: 1rem 0.5rem; border-bottom: none; }
+    .table th { border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+    .table tr { border-bottom: 1px solid var(--border-color); }
+    
+    .slot-card {
+      background-color: #F8FAFC;
+      border-radius: 8px;
+      padding: 0.875rem 0.5rem;
+      text-align: center;
+      transition: all 0.2s ease;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border: 1px solid transparent;
+    }
+    .slot-card:hover {
+      background-color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+    .slot-card.free-slot {
+      background-color: transparent;
+      border: 1px dashed #E5E7EB;
+    }
+    .slot-card.free-slot:hover {
+      background-color: #F9FAFB;
+      transform: none;
+      box-shadow: none;
+      border-color: #D1D5DB;
+    }
+    .slot-class { font-weight: 600; color: var(--text-main); font-size: 0.95rem; margin-bottom: 0.25rem; }
+    .slot-subject { color: var(--primary); font-size: 0.85rem; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">Faculty Dashboard</div>
+    <ul>
+      <li><a href="facultydashboard.html">Select Class</a></li>
+      <li class="active"><a href="facultytimetable.html">My Timetable</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">FACULTY</span>
+        <span class="name">{{ session.name }}</span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1>Teacher Timetable</h1>
+        <p>View and manage your daily class schedule.</p>
+      </div>
+
+      <div class="card">
+        <div class="filter-bar" style="box-shadow: none; border: none; padding: 0; margin-bottom: 2rem;">
+          <div class="form-group" style="flex: 1; max-width: 250px;">
+            <label>Date:</label>
+            <input type="date" id="dateFilter" class="form-control">
+          </div>
+          <button class="btn btn-outline" onclick="loadTimetable()">Filter</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="text-align: left;">Day</th>
+                <th style="text-align: center;">Period 1<br><small style="font-weight:400;color:var(--text-muted);">9:00–10:00</small></th>
+                <th style="text-align: center;">Period 2<br><small style="font-weight:400;color:var(--text-muted);">10:05–11:05</small></th>
+                <th style="text-align: center;">Period 3<br><small style="font-weight:400;color:var(--text-muted);">11:15–12:15</small></th>
+                <th style="text-align: center;">Period 4<br><small style="font-weight:400;color:var(--text-muted);">13:15–14:15</small></th>
+                <th style="text-align: center;">Period 5<br><small style="font-weight:400;color:var(--text-muted);">14:20–15:20</small></th>
+                <th style="text-align: center;">Period 6<br><small style="font-weight:400;color:var(--text-muted);">15:30–16:30</small></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for day in timetable_days %}
+              <tr>
+                <th style="font-size: 1.125rem; color: var(--text-dark); background: var(--surface);">{{ day.name }}</th>
+                {% for p in day.periods %}
+                <td>
+                  {% if p.slot != 'Free' %}
+                  <div class="slot-card">
+                    <div class="slot-class">{{ p.target_class }}</div>
+                    <div class="slot-subject">{{ p.slot }}</div>
+                  </div>
+                  {% else %}
+                  <div class="slot-card free-slot">
+                    <div style="color: var(--text-muted); font-size: 0.875rem;">—</div>
+                  </div>
+                  {% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* SHOW TODAY'S DATE BY DEFAULT */
+const today = new Date().toISOString().split("T")[0]
+document.getElementById("dateFilter").value = today
+
+/* FILTER DATE */
+function loadTimetable(){
+  let date = document.getElementById("dateFilter").value
+  alert("Loading timetable for " + date)
+}
+
+/* ENABLE EDIT MODE */
+function enableEdit(){
+  let buttons = document.querySelectorAll(".editBtn")
+  buttons.forEach(btn => {
+    btn.disabled = false
+  })
+  document.getElementById("submitBtn").style.display = "inline-flex"
+}
+
+/* SUSPEND / RESTORE CLASS */
+function toggleSuspend(btn){
+  let cell = btn.parentElement
+  if(cell.classList.contains("suspended")){
+    cell.classList.remove("suspended")
+    btn.innerText = "Suspend"
+    btn.classList.remove("btn-warning")
+    btn.classList.add("btn-outline")
+  } else {
+    cell.classList.add("suspended")
+    btn.innerText = "Restore"
+    btn.classList.remove("btn-outline")
+    btn.classList.add("btn-warning")
+  }
+}
+
+/* SUBMIT CHANGES */
+function submitChanges(){
+  let buttons = document.querySelectorAll(".editBtn")
+  buttons.forEach(btn => {
+    btn.disabled = true
+  })
+  document.getElementById("submitBtn").style.display = "none"
+  alert("Timetable changes saved successfully")
+}
+</script>
+
+</body>
+</html>

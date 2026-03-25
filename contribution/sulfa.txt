@@ -1,0 +1,58 @@
+Sulfa Saji Contributions
+========================
+
+Content:
+- Frontend design and development
+- Backend logic integration
+
+Description:
+Sulfa Saji worked on designing the user interface and implementing frontend features. She also handled backend logic integration, ensuring smooth communication between frontend and backend systems.
+
+Files and work (main project)
+-----------------------------
+Backend (Flask + APIs + templating)
+- app.py
+  Flask application: routes, session/auth, JSON APIs (attendance, faculty periods, admin
+  actions, live MJPEG feed helpers), template context for dashboards, static HTML serving,
+  integration with main.py for offline image processing and live embeddings.
+
+Frontend (UI + client scripts)
+- frontend/style.css
+  Global layout, components, and visual styling for dashboards and auth pages.
+
+- frontend/login.html
+  Sign-in UI and role selection; posts to /auth.
+
+- frontend/navigation.js
+  Lightweight client navigation helpers.
+
+- frontend/studentdashboard.html
+- frontend/studentdashboard.js
+  Student dashboard UI and charts/behaviour.
+
+- frontend/student_timetable.html
+- frontend/student.html
+- frontend/studentattendance.html
+  Student timetable, history, and per-student attendance editing views.
+
+- frontend/facultydashboard.html
+- frontend/facultytimetable.html
+- frontend/faculty.html
+  Faculty workspace, timetable, and related screens.
+
+- frontend/admindashboard.html
+- frontend/addfaculty.html
+- frontend/adminclassview.html
+- frontend/edittimetable.html
+- frontend/systemstatus.html
+- frontend/live.html
+  Admin overview, faculty registration, class views, timetable editor, status, live monitor.
+
+- frontend/viewattendance.html
+- frontend/capture.html
+  Attendance viewing and capture-related UI.
+
+Demo copy (same frontend/backend integration pattern)
+---------------------------------------------------
+- demo/app.py
+- demo/frontend/*  (mirrors the main frontend set: HTML, CSS, JS listed above)

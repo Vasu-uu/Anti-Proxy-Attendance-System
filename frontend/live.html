@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live Camera</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .live-frame {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow);
+      background: #000;
+    }
+    .live-frame img {
+      width: 100%;
+      display: block;
+      background: #000;
+    }
+    .live-help {
+      max-width: 560px;
+      margin: 0.75rem auto 0;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .capture-timer {
+      max-width: 560px;
+      margin: 0 auto 0.9rem;
+      border-left: 4px solid var(--primary);
+      background: var(--card-bg);
+    }
+    .timer-title {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+    }
+    .timer-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .timer-sub {
+      margin-top: 0.35rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">Admin Dashboard</div>
+    <ul>
+      <li><a href="admindashboard.html">Dashboard</a></li>
+      <li><a href="addfaculty.html">Add Faculty</a></li>
+      <li><a href="adminclassview.html">View Classes</a></li>
+      <li><a href="edittimetable.html">Edit Timetable</a></li>
+      <li><a href="systemstatus.html">System Status</a></li>
+      <li class="active"><a href="live.html">Live</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">ADMIN</span>
+        <span class="name">{{ session.name }}</span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1>Live Camera Monitor</h1>
+        <p>Live DroidCam feed (Wi‑Fi) with face recognition bounding boxes for identified students.</p>
+      </div>
+
+      <div class="card capture-timer">
+        <div class="timer-title">Next automatic attendance capture</div>
+        <div id="nextCapture" class="timer-value">Calculating...</div>
+        <div id="nextCaptureSub" class="timer-sub">Using configured class periods</div>
+      </div>
+
+      <div class="live-frame card" style="padding:0;">
+        <img src="/api/admin/live_feed" alt="Live feed">
+      </div>
+      <p class="live-help">Video from DroidCam — IP is set in <code>main.py</code> as <code>DROIDCAM_HOST</code> (current Wi‑Fi <code>192.168.4.69</code>; change it if the DroidCam app shows a different address).</p>
+    </div>
+  </main>
+</div>
+<script>
+const periods = [
+  { start: "09:00", end: "10:00" },
+  { start: "10:05", end: "11:05" },
+  { start: "11:15", end: "12:15" },
+  { start: "13:15", end: "14:15" },
+  { start: "14:20", end: "15:20" },
+  { start: "15:30", end: "16:30" }
+];
+
+function toDateToday(timeStr) {
+  const [h, m] = timeStr.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function formatCountdown(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const hh = String(Math.floor(total / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
+  const ss = String(total % 60).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
+function getNextCaptureWindow(now) {
+  const windows = [];
+  periods.forEach((p, index) => {
+    const start = toDateToday(p.start);
+    const end = toDateToday(p.end);
+    const startCapture = new Date(start.getTime() + 10 * 60 * 1000);
+    const endCapture = new Date(end.getTime() - 5 * 60 * 1000);
+    windows.push({ period: index + 1, type: "start", at: startCapture });
+    windows.push({ period: index + 1, type: "end", at: endCapture });
+  });
+
+  for (const w of windows) {
+    if (w.at > now) return w;
+  }
+  return null;
+}
+
+function updateCaptureTimer() {
+  const now = new Date();
+  const title = document.getElementById("nextCapture");
+  const sub = document.getElementById("nextCaptureSub");
+  const next = getNextCaptureWindow(now);
+
+  if (!next) {
+    title.textContent = "No more capture windows today";
+    sub.textContent = "Automatic capture resumes with tomorrow's timetable";
+    return;
+  }
+
+  const diff = next.at.getTime() - now.getTime();
+  title.textContent = `${formatCountdown(diff)} remaining`;
+  sub.textContent = `Period ${next.period} ${next.type} capture at ${next.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+updateCaptureTimer();
+setInterval(updateCaptureTimer, 1000);
+</script>
+</body>
+</html>

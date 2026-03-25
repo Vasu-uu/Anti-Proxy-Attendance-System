@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">Admin Dashboard</div>
+    <ul>
+      <li class="active"><a href="admindashboard.html">Dashboard</a></li>
+      <li><a href="addfaculty.html">Add Faculty</a></li>
+      <li><a href="adminclassview.html">View Classes</a></li>
+      <li><a href="edittimetable.html">Edit Timetable</a></li>
+      <li><a href="systemstatus.html">System Status</a></li>
+      <li><a href="live.html">Live</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">ADMIN</span>
+        <span class="name">{{ session.name }}</span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1>Overview</h1>
+        <p id="info">System Administration Dashboard</p>
+      </div>
+
+      <!-- Stats -->
+      <section class="grid-cols-3" style="margin-bottom: 2rem;">
+        <div class="card">
+          <div class="card-subtitle">Total Students</div>
+          <h2 style="font-size: 2rem; color: var(--primary);">{{ total_students }}</h2>
+        </div>
+        <div class="card">
+          <div class="card-subtitle">Active Classes</div>
+          <h2 style="font-size: 2rem; color: var(--success);">{{ active_classes }}</h2>
+        </div>
+        <div class="card">
+          <div class="card-subtitle">Total Subjects</div>
+          <h2 style="font-size: 2rem; color: var(--warning);">{{ total_subjects }}</h2>
+        </div>
+      </section>
+
+      <section class="card" style="margin-bottom: 2rem;">
+        <h2 class="card-title">Turn classroom upload mode on for the whole day</h2>
+        <p class="card-subtitle">Use this when you want faculty to submit class photos instead of automatic DroidCam captures. Turning it off restores normal DroidCam attendance for the rest of today (the scheduler must be running).</p>
+        <p id="facultyUploadDayStatus" style="font-weight: 600; margin-bottom: 1rem;">Loading status…</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+          <button type="button" class="btn btn-primary" id="enableFacultyUploadDay">Use classroom photos today (disable DroidCam)</button>
+          <button type="button" class="btn btn-outline" id="disableFacultyUploadDay">Use DroidCam today (normal)</button>
+        </div>
+        <p id="facultyUploadDayMsg" style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);"></p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// Show selected data from previous page
+const params = new URLSearchParams(window.location.search);
+const dept = params.get("dept");
+const batch = params.get("batch");
+
+if (dept && batch) {
+    document.getElementById("info").innerText = `${dept} | Batch: ${batch}`;
+}
+
+function logout() {
+    window.location.href = "/logout";
+}
+
+async function refreshFacultyUploadDayStatus() {
+  const statusEl = document.getElementById("facultyUploadDayStatus");
+  try {
+    const res = await fetch("/api/admin_faculty_upload_day", { credentials: "same-origin" });
+    const data = await res.json();
+    if (!res.ok) {
+      statusEl.textContent = data.error || ("Error " + res.status);
+      statusEl.style.color = "var(--danger, #dc2626)";
+      return;
+    }
+    if (data.enabled) {
+      statusEl.textContent = "Today: classroom photo mode is ON — DroidCam auto-capture is off.";
+      statusEl.style.color = "var(--warning, #d97706)";
+    } else {
+      statusEl.textContent = "Today: DroidCam auto-capture is ON — normal operation.";
+      statusEl.style.color = "var(--success, #16a34a)";
+    }
+  } catch (e) {
+    statusEl.textContent = "Could not load status. Open the dashboard from this app (e.g. http://127.0.0.1:5000) so the API can load.";
+    statusEl.style.color = "var(--danger, #dc2626)";
+  }
+}
+
+async function postFacultyUploadDay(enabled) {
+  const msg = document.getElementById("facultyUploadDayMsg");
+  msg.textContent = "Saving…";
+  msg.style.color = "var(--text-muted)";
+  try {
+    const res = await fetch("/api/admin_faculty_upload_day", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+      credentials: "same-origin",
+    });
+    const data = await res.json();
+    if (data.success) {
+      msg.style.color = "var(--success, #16a34a)";
+      msg.textContent = data.message || "Updated.";
+      refreshFacultyUploadDayStatus();
+    } else {
+      msg.style.color = "var(--danger, #dc2626)";
+      msg.textContent = data.error || "Request failed.";
+    }
+  } catch (e) {
+    msg.style.color = "var(--danger, #dc2626)";
+    msg.textContent = "Network error.";
+  }
+}
+
+document.getElementById("enableFacultyUploadDay")?.addEventListener("click", () => postFacultyUploadDay(true));
+document.getElementById("disableFacultyUploadDay")?.addEventListener("click", () => postFacultyUploadDay(false));
+refreshFacultyUploadDayStatus();
+</script>
+
+</body>
+</html>

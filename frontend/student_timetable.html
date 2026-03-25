@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Timetable</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .table th, .table td { text-align: center; vertical-align: middle; font-size: 0.875rem; }
+    .free { color: var(--text-muted); font-style: italic; }
+    .current-period { background-color: rgba(37,99,235,0.08) !important; }
+    .current-period td { border-top: 2px solid var(--primary); border-bottom: 2px solid var(--primary); }
+    .day-header { font-weight: 700; background: var(--surface); min-width: 90px; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">Student Dashboard</div>
+    <ul>
+      <li><a href="studentdashboard.html">Dashboard</a></li>
+      <li class="active"><a href="student_timetable.html">My Timetable</a></li>
+      <li><a href="student.html">Attendance History</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <header class="topbar">
+      <h3>Saintgits College of Engineering, Kottayam</h3>
+
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1 class="title">My Timetable</h1>
+        <p>Class: <strong>{{ session.target_class }}</strong></p>
+      </div>
+
+      <div class="card">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>Period 1<br><small style="font-weight:400;color:var(--text-muted);">9:00 – 10:00</small></th>
+                <th>Period 2<br><small style="font-weight:400;color:var(--text-muted);">10:05 – 11:05</small></th>
+                <th>Period 3<br><small style="font-weight:400;color:var(--text-muted);">11:15 – 12:15</small></th>
+                <th>Period 4<br><small style="font-weight:400;color:var(--text-muted);">13:15 – 14:15</small></th>
+                <th>Period 5<br><small style="font-weight:400;color:var(--text-muted);">14:20 – 15:20</small></th>
+                <th>Period 6<br><small style="font-weight:400;color:var(--text-muted);">15:30 – 16:30</small></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for day in timetable_days %}
+              <tr {% if day.is_today %}class="current-period"{% endif %}>
+                <th class="day-header">{{ day.name }}</th>
+                {% for p in day.periods %}
+                <td {% if p.is_current %}style="background:rgba(37,99,235,0.12);font-weight:600;"{% endif %}>
+                  {% if p.subject and p.subject != 'Free Hour' %}
+                    <span style="color:var(--primary);">{{ p.subject }}</span>
+                  {% else %}
+                    <span class="free">Free Hour</span>
+                  {% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

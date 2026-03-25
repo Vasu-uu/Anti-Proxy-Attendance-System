@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Timetable</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .subject { font-weight: 600; color: var(--text-main); }
+    .class-info { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .free { color: var(--text-muted); text-align: center; font-style: italic; }
+    .suspended { background-color: #FEE2E2 !important; }
+    .suspended .subject { color: var(--danger); text-decoration: line-through; }
+    .suspended .class-info { color: var(--danger); opacity: 0.8; }
+    .table td { vertical-align: middle; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">Admin Dashboard</div>
+    <ul>
+      <li><a href="admindashboard.html">Dashboard</a></li>
+      <li><a href="addfaculty.html">Add Faculty</a></li>
+      <li><a href="adminclassview.html">View Classes</a></li>
+      <li class="active"><a href="edittimetable.html">Edit Timetable</a></li>
+      <li><a href="systemstatus.html">System Status</a></li>
+      <li><a href="live.html">Live</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">ADMIN</span>
+        <span class="name">{{ session.name }}</span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1>Admin Timetable Editor</h1>
+        <p>View and manage your daily class schedule.</p>
+      </div>
+
+      <div class="card">
+        <div class="filter-bar" style="box-shadow: none; border: none; padding: 0; margin-bottom: 2rem;">
+          <div class="form-group" style="flex: 1; max-width: 250px;">
+            <label>Select Target Class:</label>
+            <select id="classSelect" class="form-control" onchange="loadClass()">
+              <option value="">-- Choose a class --</option>
+              {% for cls in all_classes %}
+              <option value="{{ cls }}" {% if selected_class == cls %}selected{% endif %}>{{ cls }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="enableEdit()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 0.25rem;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            Edit Timetable
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="text-align: left;">Day</th>
+                <th style="text-align: center;">Hour 1</th>
+                <th style="text-align: center;">Hour 2</th>
+                <th style="text-align: center;">Hour 3</th>
+                <th style="text-align: center;">Hour 4</th>
+                <th style="text-align: center;">Hour 5</th>
+                <th style="text-align: center;">Hour 6</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for day in timetable_days %}
+              <tr>
+                <th style="font-size: 1.125rem; color: var(--text-dark); background: var(--surface);">{{ day.name }}</th>
+                {% for p in day.periods %}
+                <td>
+                  {% if p.slot != 'Free' %}
+                  <div style="color: var(--primary); font-size: 0.875rem;">{{ p.slot }}</div>
+                  <button class="btn btn-outline editBtn" onclick="toggleSuspend(this)" disabled style="margin-top: 0.75rem; font-size: 0.75rem; padding: 0.25rem 0.5rem; width: 100%;">Suspend</button>
+                  {% else %}
+                  <div style="color: var(--text-muted); font-size: 0.875rem;">Free</div>
+                  {% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top: 2rem; text-align: right;">
+          <button id="submitBtn" class="btn btn-primary" onclick="submitChanges()" style="display:none;">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* SHOW TODAY'S DATE BY DEFAULT */
+/* URL LOADER FOR CLASS */
+function loadClass() {
+  const cls = document.getElementById("classSelect").value;
+  if(cls) {
+      window.location.href = `edittimetable.html?class=${encodeURIComponent(cls)}`;
+  }
+}
+
+/* ENABLE EDIT MODE */
+/* ENABLE EDIT MODE */
+function enableEdit(){
+  let cls = document.getElementById("classSelect").value;
+  if (!cls) {
+    alert("Please select a specific Class before attempting to edit the timetable.");
+    return;
+  }
+  let buttons = document.querySelectorAll(".editBtn")
+  buttons.forEach(btn => {
+    btn.disabled = false
+  })
+  document.getElementById("submitBtn").style.display = "inline-flex"
+}
+
+/* SUSPEND / RESTORE CLASS */
+function toggleSuspend(btn){
+  let cell = btn.parentElement
+  if(cell.classList.contains("suspended")){
+    cell.classList.remove("suspended")
+    btn.innerText = "Suspend"
+    btn.classList.remove("btn-warning")
+    btn.classList.add("btn-outline")
+  } else {
+    cell.classList.add("suspended")
+    btn.innerText = "Restore"
+    btn.classList.remove("btn-outline")
+    btn.classList.add("btn-warning")
+  }
+}
+
+/* SUBMIT CHANGES */
+function submitChanges(){
+  let buttons = document.querySelectorAll(".editBtn")
+  buttons.forEach(btn => {
+    btn.disabled = true
+  })
+  document.getElementById("submitBtn").style.display = "none"
+  alert("Timetable changes saved successfully")
+}
+</script>
+
+</body>
+</html>

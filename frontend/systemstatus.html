@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>System Status</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .status-row { display:flex; justify-content:space-between; margin-bottom:1rem; align-items:center; }
+    .muted-small { color: var(--text-muted); font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">Admin Dashboard</div>
+    <ul>
+      <li><a href="admindashboard.html">Dashboard</a></li>
+      <li><a href="addfaculty.html">Add Faculty</a></li>
+      <li><a href="adminclassview.html">View Classes</a></li>
+      <li><a href="edittimetable.html">Edit Timetable</a></li>
+      <li class="active"><a href="systemstatus.html">System Status</a></li>
+      <li><a href="live.html">Live</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">ADMIN</span>
+        <span class="name">Administrator</span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1>System Health & Status</h1>
+        <p>Monitor backend services, database connections, and AI model health.</p>
+      </div>
+
+      <div class="grid-cols-2">
+        
+        <!-- Overall Status -->
+        <div id="overallCard" class="card" style="grid-column: span 2; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--success);">
+          <div>
+            <h2 id="overallTitle" style="font-size: 1.5rem; margin-bottom: 0.25rem;">Loading system status...</h2>
+            <p id="checkedAt" style="color: var(--text-muted);">Last checked: --</p>
+          </div>
+          <span id="overallBadge" class="badge badge-success" style="font-size: 1rem; padding: 0.5rem 1rem;">Checking...</span>
+        </div>
+
+        <!-- Service Cards -->
+        <div id="databaseCard" class="card">
+          <div class="status-row">
+            <h3 class="card-title" style="margin: 0;">Main Database (MySQL)</h3>
+            <span id="databaseBadge" class="badge badge-warning">Checking...</span>
+          </div>
+          <p class="card-subtitle">Current connection health</p>
+          <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+            <span style="color: var(--text-muted)">Status</span>
+            <span id="databaseDetail" style="font-weight: 500;">--</span>
+          </div>
+        </div>
+
+        <div id="embeddingCard" class="card">
+          <div class="status-row">
+            <h3 class="card-title" style="margin: 0;">Face Embeddings</h3>
+            <span id="embeddingBadge" class="badge badge-warning">Checking...</span>
+          </div>
+          <p class="card-subtitle">Student recognition data readiness</p>
+          <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+            <span style="color: var(--text-muted)">Details</span>
+            <span id="embeddingDetail" style="font-weight: 500;">--</span>
+          </div>
+        </div>
+
+        <div id="cameraCard" class="card">
+          <div class="status-row">
+            <h3 class="card-title" style="margin: 0;">Classroom Camera Feed</h3>
+            <span id="cameraBadge" class="badge badge-warning">Checking...</span>
+          </div>
+          <p class="card-subtitle">Latest camera health signal</p>
+          <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+            <span style="color: var(--text-muted)">Details</span>
+            <span id="cameraDetail" style="font-weight: 500;">--</span>
+          </div>
+        </div>
+
+        <div id="timetableCard" class="card">
+          <div class="status-row">
+            <h3 class="card-title" style="margin: 0;">Timetable Data</h3>
+            <span id="timetableBadge" class="badge badge-warning">Checking...</span>
+          </div>
+          <p class="card-subtitle">Academic schedule availability</p>
+          <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+            <span style="color: var(--text-muted)">Details</span>
+            <span id="timetableDetail" style="font-weight: 500;">--</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+function badgeClassForState(state) {
+  if (state === "success") return "badge badge-success";
+  if (state === "warning") return "badge badge-warning";
+  return "badge badge-danger";
+}
+
+function borderColorForState(state) {
+  if (state === "success") return "var(--success)";
+  if (state === "warning") return "var(--warning)";
+  return "var(--danger)";
+}
+
+function applyServiceStatus(key, payload) {
+  const badge = document.getElementById(`${key}Badge`);
+  const detail = document.getElementById(`${key}Detail`);
+  const card = document.getElementById(`${key}Card`);
+  if (badge) {
+    badge.className = badgeClassForState(payload.state);
+    badge.textContent = payload.label;
+  }
+  if (detail) detail.textContent = payload.detail || "--";
+  if (card) card.style.borderLeft = `4px solid ${borderColorForState(payload.state)}`;
+}
+
+async function loadSystemStatus() {
+  try {
+    const res = await fetch("/api/system_status");
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to fetch system status");
+    }
+
+    const overallCard = document.getElementById("overallCard");
+    const overallTitle = document.getElementById("overallTitle");
+    const overallBadge = document.getElementById("overallBadge");
+    const checkedAt = document.getElementById("checkedAt");
+
+    overallTitle.textContent = data.overall.label;
+    overallBadge.className = badgeClassForState(data.overall.state);
+    overallBadge.textContent = data.overall.label;
+    overallCard.style.borderLeft = `4px solid ${borderColorForState(data.overall.state)}`;
+    checkedAt.textContent = `Last checked: ${new Date(data.checked_at).toLocaleString()}`;
+
+    applyServiceStatus("database", data.database);
+    applyServiceStatus("embedding", data.face_embeddings);
+    applyServiceStatus("camera", data.camera);
+    applyServiceStatus("timetable", data.timetable);
+  } catch (error) {
+    const overallTitle = document.getElementById("overallTitle");
+    const overallBadge = document.getElementById("overallBadge");
+    overallTitle.textContent = "Unable to load system status";
+    overallBadge.className = "badge badge-danger";
+    overallBadge.textContent = "Failed";
+  }
+}
+
+loadSystemStatus();
+setInterval(loadSystemStatus, 30000);
+</script>
+
+</body>
+</html>

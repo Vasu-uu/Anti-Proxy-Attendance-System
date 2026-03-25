@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Faculty Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .stat-badge { display:inline-flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem; border-radius:8px; font-weight:600; font-size:0.875rem; }
+    .badge-present-bg { background:#F0FDF4; color:#16a34a; }
+    .badge-absent-bg  { background:#FEF2F2; color:#dc2626; }
+    .student-table td, .student-table th { font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">Faculty Dashboard</div>
+    <ul>
+      <li class="active"><a href="facultydashboard.html">Dashboard</a></li>
+      <li><a href="facultytimetable.html">My Timetable</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">FACULTY</span>
+        <span class="name">{{ session.name }}</span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <!-- WELCOME BANNER -->
+      <div style="background: linear-gradient(135deg, #2563EB 0%, #1e3a8a 100%); padding: 2rem; border-radius: 12px; margin-bottom: 2rem; color: white;">
+        <h2 style="margin: 0 0 0.25rem; font-size: 1.75rem; font-weight: 700;">Welcome, {{ session.name }}</h2>
+        <span style="opacity: 0.9;">Department of {{ session.department }}</span>
+      </div>
+
+      <div class="grid-cols-2" style="gap: 1.5rem;">
+
+        <!-- CLASS SELECTION CARD -->
+        <div class="card">
+          <h2 class="card-title">View Class Students</h2>
+          <p class="card-subtitle">Select a class, date, and period to view attendance details.</p>
+
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <div class="form-group" style="flex: 1; min-width: 150px;">
+              <label>Select Date:</label>
+              <input type="date" id="viewDateSelect" class="form-control" value="{{ selected_date }}" onchange="fetchViewPeriods()">
+            </div>
+            
+            <div class="form-group" style="flex: 2; min-width: 150px;">
+              <label>Select Your Period (loads based on date):</label>
+              <select id="viewPeriodSelect" class="form-control">
+                {% if selected_class and selected_period %}
+                  <option value="{{ selected_period }}|{{ selected_class }}">Period {{ selected_period }} ({ {{ selected_class }} })</option>
+                {% else %}
+                  <option value="">-- Choose Date First --</option>
+                {% endif %}
+              </select>
+            </div>
+          </div>
+          
+          <button class="btn btn-primary" onclick="viewClass()" style="width: 100%;">View Attendance</button>
+        </div>
+
+        <!-- OFFLINE PHOTO UPLOAD CARD -->
+        <div class="card">
+          <h2 class="card-title">📷 Offline Attendance</h2>
+          <p class="card-subtitle">Upload a class photo — AI detects faces and marks attendance for the selected period. For <strong>today</strong>, upload works when the admin turns on <strong>full-day classroom photo mode</strong> on the admin dashboard, or if automatic capture logged a camera failure for that period.</p>
+
+          <div class="form-group">
+            <label>Select Date (Max 3 days ago):</label>
+            <input type="date" id="offlineDate" class="form-control" onchange="fetchOfflinePeriods()">
+          </div>
+
+          <div class="form-group">
+            <label>Select Your Period (loads based on date):</label>
+            <select id="offlinePeriod" class="form-control">
+              <option value="">-- Choose Date First --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Upload Class Photo:</label>
+            <input type="file" id="classPhoto" class="form-control" accept="image/*">
+          </div>
+
+          <div id="uploadStatus" style="display:none; padding:0.75rem; border-radius:8px; margin-top:0.5rem; font-size:0.875rem;"></div>
+
+          <button class="btn btn-primary" onclick="uploadOfflinePhoto()" style="width:100%; margin-top:1rem;">
+            Upload & Detect Faces
+          </button>
+        </div>
+
+      </div>
+
+      {% if selected_class %}
+      <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border-color);">
+
+      <div class="grid-cols-2" style="gap: 1.5rem;">
+        
+        <!-- STUDENT STATS + PIE CHART -->
+        <div class="card">
+          <h2 class="card-title">Today's Attendance: {{ selected_class }}</h2>
+          <p class="card-subtitle">Students present vs absent today</p>
+
+          <div style="display:flex; gap:1rem; margin-bottom:1.5rem;">
+            <div class="stat-badge badge-present-bg">✅ Present: <span id="presentCount">{{ present_count }}</span></div>
+            <div class="stat-badge badge-absent-bg">❌ Absent: <span id="absentCount">{{ absent_count }}</span></div>
+            <div class="stat-badge" style="background:#EFF6FF;color:#2563EB;">👥 Total: {{ total_students }}</div>
+          </div>
+
+          <div style="max-width: 220px; margin: 0 auto 1.5rem;">
+            <canvas id="attendancePie"></canvas>
+          </div>
+
+          <button class="btn btn-outline" onclick="exportCSV()" style="width:100%;">⬇️ Export Attendance as CSV</button>
+        </div>
+
+        <!-- STUDENT LIST -->
+        <div class="card" style="padding:0;">
+          <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <h2 class="card-title" style="margin:0;">Students Details</h2>
+              <p class="card-subtitle" style="margin:0;">{{ total_students }} students in {{ selected_class }}</p>
+            </div>
+          </div>
+          <div class="table-responsive" style="border:none; max-height: 400px; overflow-y: auto;">
+            <table class="table student-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Roll No</th>
+                  <th style="cursor: pointer; user-select: none;" onclick="sortTable(3)" title="Click to sort by status">
+                    Status ↕️
+                  </th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in students_list %}
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td style="font-weight:500;">{{ s.name }}</td>
+                  <td>{{ s.roll_no }}</td>
+                  <td>
+                    {% if s.present %}
+                    <span class="badge badge-success">Present</span>
+                    {% else %}
+                    <span class="badge badge-danger">Absent</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="studentattendance.html?roll={{ s.roll_no }}&name={{ s.name | urlencode }}&date={{ selected_date }}&period={{ selected_period }}" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">Edit</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:2rem;">No students found in this class.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      {% endif %}
+
+    </div>
+  </main>
+</div>
+
+<script>
+function viewClass() {
+  const date = document.getElementById("viewDateSelect").value;
+  const periodVal = document.getElementById("viewPeriodSelect").value;
+  
+  if (!periodVal) {
+      alert("Please select a date and a valid period.");
+      return;
+  }
+  
+  const [period, cls] = periodVal.split("|");
+  
+  let url = `facultydashboard.html?class=${encodeURIComponent(cls)}&date=${encodeURIComponent(date)}&period=${encodeURIComponent(period)}`;
+  window.location.href = url;
+}
+
+let sortDirection = true;
+function sortTable(n) {
+  const table = document.querySelector(".student-table tbody");
+  let rows = Array.from(table.rows);
+  
+  if (rows.length === 0 || rows[0].cells.length === 1) return;
+  
+  rows.sort((a, b) => {
+    let textA = a.cells[n].innerText.trim();
+    let textB = b.cells[n].innerText.trim();
+    return sortDirection ? textA.localeCompare(textB) : textB.localeCompare(textA);
+  });
+  
+  sortDirection = !sortDirection;
+  table.innerHTML = "";
+  rows.forEach(row => table.appendChild(row));
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const dateInput = document.getElementById("offlineDate");
+  const viewDateInput = document.getElementById("viewDateSelect");
+  
+  const today = new Date();
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(today.getDate() - 3);
+  
+  if (dateInput) {
+    dateInput.max = today.toISOString().split("T")[0];
+    dateInput.min = threeDaysAgo.toISOString().split("T")[0];
+    dateInput.value = today.toISOString().split("T")[0];
+    fetchOfflinePeriods();
+  }
+  
+  if (viewDateInput) {
+      if (!viewDateInput.value) {
+          viewDateInput.value = today.toISOString().split("T")[0];
+      }
+      fetchViewPeriods();
+  }
+});
+
+async function fetchOfflinePeriods() {
+  const date = document.getElementById("offlineDate").value;
+  const periodSelect = document.getElementById("offlinePeriod");
+  await populatePeriodsDropdown(date, periodSelect);
+}
+
+async function fetchViewPeriods() {
+  const date = document.getElementById("viewDateSelect").value;
+  const periodSelect = document.getElementById("viewPeriodSelect");
+  await populatePeriodsDropdown(date, periodSelect);
+  
+  // Try to preserve existing selection if it still exists
+  const existingPeriod = "{{ selected_period }}";
+  const existingClass = "{{ selected_class }}";
+  if (existingPeriod && existingClass) {
+      const matchVal = `${existingPeriod}|${existingClass}`;
+      for (let i = 0; i < periodSelect.options.length; i++) {
+          if (periodSelect.options[i].value === matchVal) {
+              periodSelect.selectedIndex = i;
+              break;
+          }
+      }
+  }
+}
+
+async function populatePeriodsDropdown(date, periodSelect) {
+  periodSelect.innerHTML = '<option value="">-- Loading... --</option>';
+  
+  if (!date) {
+    periodSelect.innerHTML = '<option value="">-- Choose Date First --</option>';
+    return;
+  }
+  
+  try {
+    const res = await fetch(`/api/faculty_periods?date=${encodeURIComponent(date)}`);
+    const periods = await res.json();
+    
+    if (periods.length === 0) {
+      periodSelect.innerHTML = '<option value="">-- No classes on this date --</option>';
+      return;
+    }
+    
+    const todayStr = new Date().toISOString().split("T")[0];
+    const isToday = date === todayStr;
+    let html = '<option value="">-- Select Period --</option>';
+    periods.forEach(p => {
+      let tag = "";
+      if (isToday && p.upload_allowed === false) {
+        tag = " — upload locked";
+      } else if (isToday && p.upload_allowed === true) {
+        tag = " — upload OK";
+      }
+      html += `<option value="${p.period_number}|${p.target_class}">Period ${p.period_number} — ${p.slot} (${p.target_class})${tag}</option>`;
+    });
+    periodSelect.innerHTML = html;
+  } catch(e) {
+    periodSelect.innerHTML = '<option value="">-- Error loading periods --</option>';
+  }
+}
+
+{% if selected_class %}
+// Store student data for CSV export
+const studentData = [
+  {% for s in students_list %}
+  { name: "{{ s.name }}", roll_no: "{{ s.roll_no }}", cls: "{{ s.class }}", present: {{ 'true' if s.present else 'false' }} },
+  {% endfor %}
+];
+
+// Pie chart
+const ctx = document.getElementById('attendancePie');
+if (ctx) {
+  new Chart(ctx.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Present', 'Absent'],
+      datasets: [{
+        data: [{{ present_count }}, {{ absent_count }}],
+        backgroundColor: ['#16a34a', '#dc2626'],
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      plugins: { legend: { position: 'bottom' } },
+      cutout: '65%'
+    }
+  });
+}
+
+// CSV export
+function exportCSV() {
+  const today = new Date().toISOString().split('T')[0];
+  let csv = 'Name,Roll No,Class,Status,Date\n';
+  studentData.forEach(s => {
+    csv += `"${s.name}","${s.roll_no}","${s.cls}","${s.present ? 'Present' : 'Absent'}","${today}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `attendance_{{ selected_class }}_${today}.csv`;
+  a.click();
+}
+{% endif %}
+
+// Offline photo upload
+async function uploadOfflinePhoto() {
+  const periodVal = document.getElementById("offlinePeriod").value;
+  const date = document.getElementById("offlineDate").value;
+  const fileInput = document.getElementById("classPhoto");
+  const statusDiv = document.getElementById("uploadStatus");
+
+  if (!date) { alert("Please select a date."); return; }
+  if (!periodVal) { alert("Please select a valid period."); return; }
+  if (!fileInput.files[0]) { alert("Please select a photo to upload."); return; }
+
+  const [period, cls] = periodVal.split("|");
+
+  const formData = new FormData();
+  formData.append("photo", fileInput.files[0]);
+  formData.append("target_class", cls);
+  formData.append("period", period);
+  formData.append("date", date);
+
+  statusDiv.style.display = "block";
+  statusDiv.style.background = "#EFF6FF";
+  statusDiv.style.color = "#2563EB";
+  statusDiv.innerText = "⏳ Processing image — detecting faces...";
+
+  try {
+    const res = await fetch("/api/offline_attendance", { method: "POST", body: formData });
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+
+    if (!res.ok) {
+      const msg = (data && data.error) ? data.error : `Server error (HTTP ${res.status})`;
+      statusDiv.style.background = "#FEF2F2";
+      statusDiv.style.color = "#dc2626";
+      statusDiv.innerText = "❌ Error: " + msg;
+      return;
+    }
+
+    if (data && data.success) {
+      statusDiv.style.background = "#F0FDF4";
+      statusDiv.style.color = "#16a34a";
+      statusDiv.innerHTML = `✅ Successfully mapped <b>${data.detected}</b> Present and <b>${data.absent}</b> Absent. Reloading grid...`;
+      setTimeout(() => { window.location.reload(); }, 1500);
+    } else {
+      statusDiv.style.background = "#FEF2F2";
+      statusDiv.style.color = "#dc2626";
+      statusDiv.innerText = "❌ Error: " + (data.error || "Unknown error");
+    }
+  } catch(e) {
+    statusDiv.style.background = "#FEF2F2";
+    statusDiv.style.color = "#dc2626";
+    statusDiv.innerText = "❌ Network error. Please try again.";
+  }
+}
+</script>
+
+</body>
+</html>

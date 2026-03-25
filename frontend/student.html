@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Attendance History</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">Student Dashboard</div>
+    <ul>
+      <li><a href="studentdashboard.html">Dashboard</a></li>
+      <li><a href="student_timetable.html">My Timetable</a></li>
+      <li class="active"><a href="#">Attendance History</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <header class="topbar">
+      <h3>Saintgits College of Engineering, Kottayam</h3>
+
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1>Attendance History</h1>
+        <p>View your daily attendance record across all 6 periods.</p>
+      </div>
+
+      <!-- ATTENDANCE TABLE -->
+      <div class="card" style="padding: 0;">
+        <div class="table-responsive" style="border: none;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Period 1</th>
+                <th>Period 2</th>
+                <th>Period 3</th>
+                <th>Period 4</th>
+                <th>Period 5</th>
+                <th>Period 6</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in attendance_records %}
+              <tr>
+                <td style="font-weight: 500;">{{ row.date }}</td>
+                {% for h in ['hour1','hour2','hour3','hour4','hour5','hour6'] %}
+                <td><span class="badge {% if row[h] == 'Present' %}badge-success{% elif row[h] == 'Partial' %}badge-warning{% elif row[h] == 'Absent' %}badge-danger{% else %}badge-neutral{% endif %}">{{ row[h] or '—' }}</span></td>
+                {% endfor %}
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No attendance records found.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

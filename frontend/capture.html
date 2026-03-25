@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Capture Attendance</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">Faculty Dashboard</div>
+    <ul>
+      <li><a href="admin.html">Select Class</a></li>
+      <li class="active"><a href="#">Capture Attendance</a></li>
+      <li><a href="facultytimetable.html">My Timetable</a></li>
+      <li><a href="login.html">Logout</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">FACULTY</span>
+        <span class="name">Remya</span>
+      </div>
+    </header>
+
+    <div class="page-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 120px);">
+      
+      <div class="card" style="width: 100%; max-width: 800px; text-align: center;">
+        <h1 style="font-size: 2rem; margin-bottom: 0.5rem; color: var(--text-main);">Capture Live Class</h1>
+        <p class="subtitle" style="color: var(--text-muted); margin-bottom: 2rem;">Ensure the camera has a clear view of all students before initiating the scan.</p>
+        
+        <!-- Camera Preview -->
+        <div style="width: 100%; background: #E5E7EB; aspect-ratio: 16/9; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; margin-bottom: 2rem;">
+          <svg width="48" height="48" fill="none" stroke="var(--text-muted)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          <div style="position: absolute; bottom: 1rem; right: 1rem;">
+            <span class="badge badge-success">Camera Active</span>
+          </div>
+        </div>
+
+        <button id="captureBtn" class="btn btn-primary" style="font-size: 1.125rem; padding: 0.75rem 2rem;" onclick="startCapture()">
+          Initiate Full Capture
+        </button>
+
+        <!-- Processing Steps (hidden by default) -->
+        <div id="processingSection" style="display: none; text-align: left; margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <div>
+              <h3 style="font-size: 1.125rem; font-weight: 600;">Processing Frames</h3>
+              <p style="font-size: 0.875rem; color: var(--text-muted);">Analyzing faces to mark attendance...</p>
+            </div>
+            <span id="progressText" style="font-weight: 600; color: var(--primary);">0%</span>
+          </div>
+
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+
+          <div class="frame-grid">
+            <div class="frame-box">Grid Section 1</div>
+            <div class="frame-box">Grid Section 2</div>
+            <div class="frame-box">Grid Section 3</div>
+            <div class="frame-box">Grid Section 4</div>
+            <div class="frame-box">Grid Section 5</div>
+            <div class="frame-box">Grid Section 6</div>
+          </div>
+
+          <div style="margin-top: 2rem; text-align: right;">
+            <button id="finishBtn" class="btn btn-success" disabled onclick="finishCapture()">Verify Results →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+function startCapture() {
+  document.getElementById("captureBtn").disabled = true;
+  document.getElementById("captureBtn").innerText = "Capturing...";
+  document.getElementById("processingSection").style.display = "block";
+  
+  let progress = 0;
+  const fill = document.getElementById("progressFill");
+  const text = document.getElementById("progressText");
+  const btn = document.getElementById("finishBtn");
+  
+  const interval = setInterval(() => {
+    progress += 20;
+    fill.style.width = progress + "%";
+    text.innerText = progress + "%";
+    
+    if (progress >= 100) {
+      clearInterval(interval);
+      document.getElementById("captureBtn").innerText = "Capture Complete";
+      btn.disabled = false;
+    }
+  }, 600);
+}
+
+function finishCapture() {
+  window.location.href = "studentattendance.html?roll=ALL&name=Batch";
+}
+</script>
+
+</body>
+</html>

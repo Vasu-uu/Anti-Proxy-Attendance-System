@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Attendance App - Login</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+  <div class="login-container">
+
+    <!-- LEFT SIDE (Image + Text) -->
+    <div class="login-left">
+      <div class="login-left-content">
+        <h1>Welcome to<br>Saintgits!</h1>
+        <p>Access your dashboard and stay updated with your attendance records across all departments with our modern Anti-Proxy System.</p>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE (Login Form) -->
+    <div class="login-right">
+      <div class="login-card">
+        
+        <h2>Sign in to account</h2>
+        <p class="subtitle">Enter your credentials to access your dashboard</p>
+
+        <form action="/auth" method="POST">
+          <input type="hidden" name="auth_type" value="login">
+          
+          <div class="form-group">
+            <label>Login As</label>
+            <select name="role" id="role" class="form-control" required>
+              <option value="">Select Role</option>
+              <option value="student">Student</option>
+              <option value="faculty">Faculty</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" name="email" id="email" class="form-control" placeholder="e.g. john@example.com" required>
+          </div>
+
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem;">
+            <a href="#" style="font-size: 0.875rem; color: var(--primary); font-weight: 500;">Forgot Password?</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; height: 48px; font-size: 1rem;">Sign In →</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="navigation.js"></script>
+</body>
+</html>

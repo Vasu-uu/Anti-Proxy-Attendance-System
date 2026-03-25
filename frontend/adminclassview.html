@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Class View — Admin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">Admin Dashboard</div>
+    <ul>
+      <li><a href="admindashboard.html">Dashboard</a></li>
+      <li><a href="addfaculty.html">Add Faculty</a></li>
+      <li class="active"><a href="adminclassview.html">View Classes</a></li>
+      <li><a href="edittimetable.html">Edit Timetable</a></li>
+      <li><a href="systemstatus.html">System Status</a></li>
+      <li><a href="live.html">Live</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">ADMIN</span>
+        <span class="name">{{ session.name }}</span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1 class="title">Class View</h1>
+        <p>Select a class to view its students and timetable.</p>
+      </div>
+
+      <!-- CLASS SELECTOR -->
+      <div class="card" style="max-width: 480px; margin-bottom: 1.5rem;">
+        <h2 class="card-title">Select Class</h2>
+        <div class="form-group">
+          <label>Class:</label>
+          <select id="classSelect" class="form-control" onchange="loadClass()">
+            <option value="">-- Choose a class --</option>
+            {% for cls in all_classes %}
+            <option value="{{ cls }}" {% if selected_class == cls %}selected{% endif %}>{{ cls }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      {% if selected_class %}
+
+      <!-- STUDENT TABLE -->
+      <div class="card" style="margin-bottom: 1.5rem; padding: 0;">
+        <div style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+          <h2 class="card-title" style="margin:0;">Students — {{ selected_class }}</h2>
+          <p class="card-subtitle" style="margin:0;">{{ students | length }} enrolled student(s)</p>
+        </div>
+        <div class="table-responsive" style="border: none;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th><th>Name</th><th>Roll No</th><th>Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in students %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td style="font-weight:500;">{{ s.name }}</td>
+                <td>{{ s.roll_no }}</td>
+                <td>{{ s.email }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:2rem;">No students enrolled in this class.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TIMETABLE -->
+      <div class="card" style="padding: 0;">
+        <div style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+          <h2 class="card-title" style="margin:0;">Timetable — {{ selected_class }}</h2>
+        </div>
+        <div class="table-responsive" style="border: none;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>Period 1<br><small style="font-weight:400;color:var(--text-muted);">9:00–10:00</small></th>
+                <th>Period 2<br><small style="font-weight:400;color:var(--text-muted);">10:05–11:05</small></th>
+                <th>Period 3<br><small style="font-weight:400;color:var(--text-muted);">11:15–12:15</small></th>
+                <th>Period 4<br><small style="font-weight:400;color:var(--text-muted);">13:15–14:15</small></th>
+                <th>Period 5<br><small style="font-weight:400;color:var(--text-muted);">14:20–15:20</small></th>
+                <th>Period 6<br><small style="font-weight:400;color:var(--text-muted);">15:30–16:30</small></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for day in timetable_days %}
+              <tr>
+                <th style="background: var(--surface);">{{ day.name }}</th>
+                {% for p in day.periods %}
+                <td style="text-align:center;">
+                  {% if p.slot and p.slot not in ['Free', 'Free Hour', None] %}
+                  <span style="color: var(--primary); font-size: 0.85rem; font-weight:500;">{{ p.slot }}</span>
+                  {% else %}
+                  <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
+                  {% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% endif %}
+    </div>
+  </main>
+</div>
+
+<script>
+function loadClass() {
+  const cls = document.getElementById("classSelect").value;
+  if (cls) window.location.href = `adminclassview.html?class=${encodeURIComponent(cls)}`;
+}
+</script>
+
+</body>
+</html>

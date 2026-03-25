@@ -1,0 +1,40 @@
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+venv/
+env/
+.env
+
+test/
+datasets/
+dataset/
+# Models and Weights
+saved_models/
+*.npz
+*.h5
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Logs and databases
+*.log
+attendance_log.csv
+*.sqlite
+*.db
+
+# Image/Video uploads
+uploads/
+*.mp4
+*.avi
+
+contributions/
+project explanation.txt
+demo/

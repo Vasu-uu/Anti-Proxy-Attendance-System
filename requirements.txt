@@ -1,0 +1,10 @@
+opencv-python
+numpy
+mtcnn
+keras-facenet
+ultralytics
+Flask
+mysql-connector-python
+torch
+torchvision
+tensorflow

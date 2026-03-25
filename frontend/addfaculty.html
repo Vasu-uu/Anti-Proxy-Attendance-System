@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Faculty</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">Admin Dashboard</div>
+    <ul>
+      <li><a href="admindashboard.html">Dashboard</a></li>
+      <li class="active"><a href="addfaculty.html">Add Faculty</a></li>
+      <li><a href="adminclassview.html">View Classes</a></li>
+      <li><a href="edittimetable.html">Edit Timetable</a></li>
+      <li><a href="systemstatus.html">System Status</a></li>
+      <li><a href="live.html">Live</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">ADMIN</span>
+        <span class="name">{{ session.name }}</span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1>Add New Faculty</h1>
+        <p>Register a new faculty member into the attendance system.</p>
+      </div>
+
+      <div class="card" style="max-width: 500px;">
+        <h2 class="card-title">Faculty Details</h2>
+        <form action="/auth" method="POST">
+          <input type="hidden" name="auth_type" value="admin_add_faculty">
+          
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" name="fullname" class="form-control" placeholder="Prof. Jane Doe" required>
+          </div>
+
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" name="email" class="form-control" placeholder="jane.doe@university.edu" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Department</label>
+            <input type="text" name="department" class="form-control" placeholder="Computer Science" required>
+          </div>
+
+          <div class="form-group">
+            <label>Temporary Password</label>
+            <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+            Create Faculty Account
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

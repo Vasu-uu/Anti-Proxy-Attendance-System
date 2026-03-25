@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Attendance</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .status {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      width: 100%;
+    }
+    .present {
+      background: var(--success);
+      color: white;
+    }
+    .absent {
+      background: var(--danger);
+      color: white;
+    }
+    .status:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    {% if session.role == 'admin' %}
+    <div class="logo">AMS Admin</div>
+    <ul>
+      <li><a href="admindashboard.html">Dashboard</a></li>
+      <li><a href="addfaculty.html">Add Faculty</a></li>
+      <li><a href="adminclassview.html">View Classes</a></li>
+      <li class="active"><a href="viewattendance.html">View Attendance</a></li>
+      <li><a href="edittimetable.html">Edit Timetable</a></li>
+      <li><a href="systemstatus.html">System Status</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+    {% else %}
+    <div class="logo">Teacher Portal</div>
+    <ul>
+      <li><a href="facultydashboard.html">Select Class</a></li>
+      <li><a href="facultytimetable.html">My Timetable</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+    {% endif %}
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">{{ session.role.upper() }}</span>
+        <span class="name">{{ session.name }}</span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1 id="studentName">Student Attendance</h1>
+        <p>Mark attendance hour-by-hour for the selected date.</p>
+      </div>
+
+      <div class="card" style="max-width: 600px;">
+        <div class="filter-bar" style="box-shadow: none; border: none; padding: 0; margin-bottom: 1.5rem;">
+          <div class="form-group" style="flex: 1;">
+            <label>Date:</label>
+            <input type="date" id="dateFilter" class="form-control">
+          </div>
+          <button class="btn btn-outline" onclick="loadAttendance()">Filter</button>
+          <button class="btn btn-primary" onclick="enableEdit()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 0.25rem;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            Edit
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Hour</th>
+                <th style="width: 120px; text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in range(1, 7) %}
+              <tr>
+                <td>Hour {{ i }}</td>
+                <td>
+                  <button class="status present" onclick="toggle(this)" disabled>P</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top: 1.5rem; text-align: right;">
+          <button class="btn btn-primary" onclick="submitAttendance()">Save / Override Attendance</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* READ STUDENT DETAILS FROM URL */
+const params = new URLSearchParams(window.location.search)
+const roll = params.get("roll")
+const name = params.get("name")
+
+if (name && roll) {
+  document.getElementById("studentName").innerText = "Attendance for " + name + " (Roll No: " + roll + ")"
+}
+
+/* INITIALIZE FROM URL PARAMS */
+document.addEventListener("DOMContentLoaded", () => {
+    const dateParam = params.get("date");
+    const periodParam = params.get("period");
+    
+    if (dateParam) {
+        const dateInput = document.getElementById("dateFilter");
+        dateInput.value = dateParam;
+        
+        // Lock the date if a specific period is pre-selected (faculty mode)
+        if (periodParam) {
+            dateInput.disabled = true;
+        }
+        
+        // Auto load attendance for the pre-filled date
+        loadAttendance();
+    }
+});
+
+/* ENABLE EDIT MODE */
+function enableEdit(){
+  const allowedPeriod = params.get("period");
+  
+  let buttons = document.querySelectorAll(".status");
+  buttons.forEach((btn, index) => {
+    // If a period is specified in the URL (faculty mode), only enable that button
+    if (allowedPeriod) {
+        if ((index + 1).toString() === allowedPeriod) {
+            btn.disabled = false;
+        }
+    } else {
+        // No period restriction (admin mode) — enable all
+        btn.disabled = false;
+    }
+  });
+}
+
+/* TOGGLE P / A */
+function toggle(btn){
+  if(btn.innerText === "P"){
+    btn.innerText = "A"
+    btn.classList.remove("present")
+    btn.classList.add("absent")
+  } else {
+    btn.innerText = "P"
+    btn.classList.remove("absent")
+    btn.classList.add("present")
+  }
+}
+
+/* FILTER DATE */
+async function loadAttendance(){
+  let date = document.getElementById("dateFilter").value
+  if (!date) {
+      alert("Please select a date first.");
+      return;
+  }
+  
+  try {
+      let res = await fetch(`/api/student/attendance?roll=${roll}&from=${date}&to=${date}`);
+      let data = await res.json();
+      
+      let buttons = document.querySelectorAll(".status");
+      
+      buttons.forEach((btn, i) => {
+          let hourCol = `hour${i + 1}`;
+          let status = "A"; // Default to Absent if unmapped
+          if (data && data.length > 0) {
+              let record = data[0];
+              if (record[hourCol] === "Present") {
+                  status = "P";
+              } else if (record[hourCol] === "Absent") {
+                  status = "A";
+              }
+          }
+          
+          btn.innerText = status;
+          if (status === "P") {
+              btn.classList.remove("absent");
+              btn.classList.add("present");
+          } else {
+              btn.classList.remove("present");
+              btn.classList.add("absent");
+          }
+      });
+  } catch(e) {
+      console.error("Failed to load historical vectors: ", e);
+  }
+}
+
+/* SUBMIT */
+async function submitAttendance(){
+  let date = document.getElementById("dateFilter").value
+  if (!date) {
+      alert("CRITICAL ERROR: No Date Bound. Please explicitly lock in a date before overriding local database.");
+      return;
+  }
+
+  let buttons = document.querySelectorAll(".status")
+  let updates = {}
+
+  buttons.forEach((btn,index)=>{
+    if (!btn.disabled) {
+        updates[`hour${index+1}`] = btn.innerText === "P" ? "Present" : "Absent"
+    }
+  })
+  
+  if (Object.keys(updates).length === 0) {
+      alert("No changes to save. Please click 'Edit' first to enable editing.");
+      return;
+  }
+
+  try {
+    let response = await fetch('/api/admin_update_attendance', {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roll: roll, date: date, updates: updates })
+    })
+    
+    if (response.ok) {
+       alert("Attendance Overwritten Successfully for " + date)
+    } else {
+       alert("Failed to override attendance limits.")
+    }
+  } catch(e) { alert("Network Integrity Error: " + e) }
+}
+</script>
+
+</body>
+</html>
