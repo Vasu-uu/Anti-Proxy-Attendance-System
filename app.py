@@ -1,5 +1,3 @@
-
-
 from flask import Flask, jsonify, request, redirect, session, render_template, send_from_directory, Response
 import mysql.connector
 import os
@@ -32,7 +30,7 @@ def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",
-        password="Vasu2005",
+        password="",              #mysqlpasswordhere
         database="Attandance"
     )
 
