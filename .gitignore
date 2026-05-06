@@ -23,6 +23,7 @@ Thumbs.db
 # IDEs
 .vscode/
 .idea/
+.gemini/
 
 # Logs and databases
 *.log

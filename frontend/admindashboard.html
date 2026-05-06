@@ -57,11 +57,11 @@
 
       <section class="card" style="margin-bottom: 2rem;">
         <h2 class="card-title">Turn classroom upload mode on for the whole day</h2>
-        <p class="card-subtitle">Use this when you want faculty to submit class photos instead of automatic DroidCam captures. Turning it off restores normal DroidCam attendance for the rest of today (the scheduler must be running).</p>
+        <p class="card-subtitle">Use this when you want faculty to submit class photos instead of automatic irium Webcam captures. Turning it off restores normal irium Webcam attendance for the rest of today (the scheduler must be running).</p>
         <p id="facultyUploadDayStatus" style="font-weight: 600; margin-bottom: 1rem;">Loading status…</p>
         <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
-          <button type="button" class="btn btn-primary" id="enableFacultyUploadDay">Use classroom photos today (disable DroidCam)</button>
-          <button type="button" class="btn btn-outline" id="disableFacultyUploadDay">Use DroidCam today (normal)</button>
+          <button type="button" class="btn btn-primary" id="enableFacultyUploadDay">Use classroom photos today (disable irium Webcam)</button>
+          <button type="button" class="btn btn-outline" id="disableFacultyUploadDay">Use irium Webcam today (normal)</button>
         </div>
         <p id="facultyUploadDayMsg" style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);"></p>
       </section>
@@ -95,10 +95,10 @@ async function refreshFacultyUploadDayStatus() {
       return;
     }
     if (data.enabled) {
-      statusEl.textContent = "Today: classroom photo mode is ON — DroidCam auto-capture is off.";
+      statusEl.textContent = "Today: classroom photo mode is ON — irium Webcam auto-capture is off.";
       statusEl.style.color = "var(--warning, #d97706)";
     } else {
-      statusEl.textContent = "Today: DroidCam auto-capture is ON — normal operation.";
+      statusEl.textContent = "Today: irium Webcam auto-capture is ON — normal operation.";
       statusEl.style.color = "var(--success, #16a34a)";
     }
   } catch (e) {

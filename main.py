@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import gc
 import time as time_module
-import urllib.request
 from datetime import datetime, time, timedelta
 from detection.face_detector import detect_faces
 from models.embedding_model import get_face_embedding
@@ -16,7 +15,7 @@ def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",
-        password="",    #mysqlpasswordhere
+        password="Vasu2005",    #mysqlpasswordhere
         database="Attandance"
     )
 
@@ -52,72 +51,77 @@ def load_embeddings_from_db(target_class=None):
 
 THRESHOLD = 0.5
 
-# DroidCam over WiFi (phone and PC on same LAN; start server in DroidCam app).
-# Port 4747 is default. Paths vary by app version: /video, /mjpegfeed, /videofeed.
-# Snapshot fallback: /shot.jpg (works when OpenCV HTTP capture fails on Windows).
-# DroidCam IP: use the address shown in the DroidCam app (Wi‑Fi or USB tethering).
-# Wi‑Fi example: http://10.10.187.70:4747/video
-DROIDCAM_HOST = "192.168.4.69"
-DROIDCAM_PORT = 4747
+# Iriun Webcam over USB (UVC device).
+# The app is called "Iriun Webcam" — device name shown in Windows is "Iriun Webcam".
+# IRIUN_CAMERA_INDEX is the fallback index if auto-detection fails.
+# Confirmed via snapshot test: OpenCV VideoCapture index 0 = Iriun, index 2 = ACER built-in.
+IRIUN_CAMERA_INDEX = 0
 
 
-def droidcam_base_url():
-    return f"http://{DROIDCAM_HOST}:{DROIDCAM_PORT}"
-
-
-# Primary URL kept for backwards compatibility and logging.
-DROIDCAM_URL = f"{droidcam_base_url()}/video"
-
-
-def droidcam_stream_urls():
-    base = droidcam_base_url()
-    return [
-        f"{base}/video",
-        f"{base}/mjpegfeed",
-        f"{base}/videofeed",
-    ]
-
-
-def open_droidcam_capture():
+def _find_iriun_device_index():
     """
-    Open DroidCam MJPEG stream. Tries FFMPEG backend first (needed on many Windows builds).
-    If the phone is unreachable, skip VideoCapture entirely so FFmpeg does not spam tcp errors.
+    Confirm Iriun Webcam is connected and return IRIUN_CAMERA_INDEX.
+    Diagnostic confirmed: OpenCV VideoCapture index 1 = Iriun (DSHOW backend).
+    PnpDevice sort order does NOT match OpenCV indices, so we use the
+    hardcoded IRIUN_CAMERA_INDEX rather than the PnpDevice position.
     """
-    if read_droidcam_shot_jpeg(timeout=2) is None:
-        return None
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+             "Get-PnpDevice -Class Camera -Status OK | Select-Object -ExpandProperty FriendlyName"],
+            capture_output=True, text=True, timeout=6,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        names = [n.strip() for n in result.stdout.splitlines() if n.strip()]
+        print(f"[Iriun] Connected camera devices: {names}")
+        if any("iriun" in n.lower() for n in names):
+            print(f"[Iriun] Iriun Webcam present — using VideoCapture index {IRIUN_CAMERA_INDEX}")
+        else:
+            print("[Iriun] WARNING: Iriun Webcam not found. Is the Iriun app running on the phone?")
+    except Exception as e:
+        print(f"[Iriun] Device check failed ({e})")
+    return IRIUN_CAMERA_INDEX
 
-    backends = []
-    if hasattr(cv2, "CAP_FFMPEG"):
-        backends.append(cv2.CAP_FFMPEG)
-    backends.append(cv2.CAP_ANY)
 
-    for url in droidcam_stream_urls():
-        for backend in backends:
-            cap = cv2.VideoCapture(url, backend)
-            if not cap.isOpened():
-                cap.release()
-                continue
-            for _ in range(10):
-                ret, frame = cap.read()
-                if ret and frame is not None and frame.size > 0:
-                    return cap
+def open_irium_capture():
+    """
+    Open the Iriun USB webcam.
+    Diagnostic confirmed: DSHOW backend works; MSMF does not on this system.
+    OpenCV VideoCapture index 1 = Iriun Webcam, index 2 = ACER built-in.
+    Returns a cv2.VideoCapture on success, or None if Iriun is not accessible.
+    """
+    idx = _find_iriun_device_index()
+
+    # DSHOW confirmed working; try it first. MSMF not available on this system.
+    backends = [cv2.CAP_DSHOW, cv2.CAP_ANY]
+
+    for backend in backends:
+        try:
+            cap = cv2.VideoCapture(idx, backend)
+        except Exception as e:
+            print(f"[Iriun] VideoCapture({idx}, {backend}) raised: {e}")
+            continue
+        if not cap.isOpened():
             cap.release()
+            continue
+        # Request 720p @ 30fps
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH,  1280)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        cap.set(cv2.CAP_PROP_FPS, 30)
+        for _ in range(10):
+            ret, frame = cap.read()
+            if ret and frame is not None and frame.size > 0:
+                w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                print(f"[Iriun] Opened Iriun Webcam at index {idx} — resolution {w}x{h} (backend {backend})")
+                return cap
+        cap.release()
+
+    print(f"[Iriun] Could not open Iriun Webcam at index {idx}.")
+    print("[Iriun] Ensure Iriun app is open on phone and Iriun desktop client is running on PC.")
     return None
 
-
-def read_droidcam_shot_jpeg(timeout=5):
-    """Single JPEG frame from DroidCam (reliable fallback if VideoCapture fails)."""
-    url = f"{droidcam_base_url()}/shot.jpg?{int(time_module.time() * 1000)}"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = resp.read()
-        if not data:
-            return None
-        arr = np.frombuffer(data, dtype=np.uint8)
-        return cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    except Exception:
-        return None
 
 # PERIOD TIMINGS
 
@@ -202,7 +206,7 @@ def run_attendance_session(period, capture_type, target_class):
         print("Warning: No face encodings found in the database. Attendance cannot be verified.")
         return True
 
-    cap = open_droidcam_capture()
+    cap = open_irium_capture()
 
     start_time = time_module.time()
     captured_frames = []
@@ -214,8 +218,6 @@ def run_attendance_session(period, capture_type, target_class):
             ret, f = cap.read()
             if ret and f is not None and f.size > 0:
                 frame = f
-        if frame is None:
-            frame = read_droidcam_shot_jpeg()
 
         if frame is None:
             time_module.sleep(0.2)
@@ -232,7 +234,7 @@ def run_attendance_session(period, capture_type, target_class):
     cv2.destroyAllWindows()
 
     if not captured_frames:
-        print("Camera not accessible: no frames from DroidCam stream or /shot.jpg")
+        print("Camera not accessible: no frames from irium webcam (USB). Ensure the phone is connected and irium is active.")
         return False
 
     print("Processing captured images...")

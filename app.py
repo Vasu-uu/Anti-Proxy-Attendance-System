@@ -7,6 +7,7 @@ import tempfile
 import cv2
 import numpy as np
 import time as time_module
+import threading
 from models.embedding_model import get_face_embedding
 from models.similarity import cosine_similarity
 from detection.face_detector import detect_faces
@@ -30,7 +31,7 @@ def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",
-        password="",              #mysqlpasswordhere
+        password="Vasu2005",              #mysqlpasswordhere
         database="Attandance"
     )
 
@@ -104,11 +105,11 @@ def _match_face_name(face_crop, known_embeddings, known_names):
     return None, best_score
 
 
-def _droidcam_error_frame():
+def _camera_error_frame():
     error_frame = np.zeros((480, 800, 3), dtype=np.uint8)
     cv2.putText(
         error_frame,
-        "DroidCam not accessible.",
+        "irium Webcam not accessible.",
         (40, 180),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.85,
@@ -118,7 +119,7 @@ def _droidcam_error_frame():
     )
     cv2.putText(
         error_frame,
-        "Start DroidCam on phone; same Wi-Fi as this PC.",
+        "Ensure USB cable is connected and irium Webcam is active on the phone.",
         (40, 220),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.5,
@@ -128,7 +129,7 @@ def _droidcam_error_frame():
     )
     cv2.putText(
         error_frame,
-        f"{main.droidcam_base_url()}  (stream + /shot.jpg)",
+        f"Camera device index: {main.IRIUN_CAMERA_INDEX}  (change IRIUN_CAMERA_INDEX in main.py if needed)",
         (40, 255),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.45,
@@ -138,7 +139,7 @@ def _droidcam_error_frame():
     )
     cv2.putText(
         error_frame,
-        "Open that IP in browser to verify.",
+        "Check Device Manager to confirm the USB webcam device is listed.",
         (40, 285),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.5,
@@ -153,9 +154,9 @@ def _faculty_upload_mode_frame():
     frame = np.zeros((480, 800, 3), dtype=np.uint8)
     lines = [
         "Classroom upload mode is ON for today.",
-        "DroidCam auto-capture is disabled.",
+        "irium Webcam auto-capture is disabled.",
         "Faculty: use Offline Attendance with a class photo.",
-        "Admin: turn this off on the dashboard to use DroidCam again.",
+        "Admin: turn this off on the dashboard to restore irium auto-capture.",
     ]
     y = 120
     for i, line in enumerate(lines):
@@ -172,6 +173,40 @@ def _faculty_upload_mode_frame():
     return frame
 
 
+class _IriunStreamBuffer:
+    """
+    Reads frames from the Iriun camera in a background daemon thread so the
+    Flask MJPEG generator never blocks waiting on cap.read().
+    Always holds the latest frame; the generator just grabs it.
+    """
+    def __init__(self, cap):
+        self._cap     = cap
+        self._frame   = None
+        self._lock    = threading.Lock()
+        self._running = True
+        t = threading.Thread(target=self._reader, daemon=True)
+        t.start()
+
+    def _reader(self):
+        while self._running:
+            if self._cap is None or not self._cap.isOpened():
+                time_module.sleep(0.05)
+                continue
+            ret, frame = self._cap.read()
+            if ret and frame is not None and frame.size > 0:
+                with self._lock:
+                    self._frame = frame
+
+    def read(self):
+        with self._lock:
+            return self._frame
+
+    def release(self):
+        self._running = False
+        if self._cap:
+            self._cap.release()
+
+
 def generate_admin_live_stream():
     if attendance_service.is_faculty_upload_day(datetime.date.today()):
         while True:
@@ -184,66 +219,72 @@ def generate_admin_live_stream():
                 )
             time_module.sleep(1)
 
-    # DroidCam: try MJPEG via OpenCV (FFMPEG), then fall back to /shot.jpg every frame.
-    cap = main.open_droidcam_capture()
+    # Open Iriun and start background capture thread for smooth streaming.
+    cap = main.open_irium_capture()
+    buf = _IriunStreamBuffer(cap) if cap is not None else None
+
+    miss         = 0
+    frame_num    = 0
+    cached_labels = []   # list of (x1,y1,x2,y2, name, score) — rebuilt every DETECT_EVERY frames
+    DETECT_EVERY  = 5    # face detection + embedding inference every N frames
+
     try:
-        miss = 0
         while True:
-            frame = None
-            if cap is not None and cap.isOpened():
-                ret, f = cap.read()
-                if ret and f is not None and f.size > 0:
-                    frame = f
-            if frame is None:
-                frame = main.read_droidcam_shot_jpeg()
+            frame = buf.read() if buf is not None else None
+
             if frame is None:
                 miss += 1
                 if miss % 10 == 1:
-                    err = _droidcam_error_frame()
+                    err = _camera_error_frame()
                     ok, buffer = cv2.imencode(".jpg", err)
                     if ok:
                         yield (
                             b"--frame\r\n"
                             b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
                         )
-                time_module.sleep(0.3)
+                time_module.sleep(0.05)
                 continue
-            miss = 0
 
+            miss      = 0
+            frame_num += 1
+            draw      = frame.copy()
+
+            # Every DETECT_EVERY frames: detect faces AND run embedding inference.
+            # In between frames: just draw cached labels (pure pixel ops, very fast).
             known_embeddings, known_names = _get_live_embeddings()
-            if known_embeddings:
-                boxes = detect_faces(frame)
-                for (x1, y1, x2, y2) in boxes:
+            if known_embeddings and frame_num % DETECT_EVERY == 1:
+                cached_labels = []
+                for (x1, y1, x2, y2) in detect_faces(frame):
                     face = frame[y1:y2, x1:x2]
                     if face is None or face.size == 0:
                         continue
                     matched_name, score = _match_face_name(face, known_embeddings, known_names)
-                    if not matched_name:
-                        continue
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (22, 163, 74), 2)
-                    label = f"{matched_name} ({score:.2f})"
-                    cv2.putText(
-                        frame,
-                        label,
-                        (x1, max(y1 - 10, 20)),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5,
-                        (22, 163, 74),
-                        2,
-                        cv2.LINE_AA,
-                    )
+                    cached_labels.append((x1, y1, x2, y2, matched_name, score))
 
-            ok, buffer = cv2.imencode(".jpg", frame)
+            # Draw cached labels on every frame (no inference cost).
+            for (x1, y1, x2, y2, matched_name, score) in cached_labels:
+                if not matched_name:
+                    continue
+                cv2.rectangle(draw, (x1, y1), (x2, y2), (22, 163, 74), 2)
+                cv2.putText(
+                    draw, f"{matched_name} ({score:.2f})", (x1, max(y1 - 10, 20)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (22, 163, 74), 2, cv2.LINE_AA,
+                )
+
+            ok, encoded = cv2.imencode(".jpg", draw, [cv2.IMWRITE_JPEG_QUALITY, 85])
             if not ok:
                 continue
-            frame_bytes = buffer.tobytes()
             yield (
                 b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + encoded.tobytes() + b"\r\n"
             )
     finally:
-        if cap is not None:
+        if buf is not None:
+            buf.release()
+        elif cap is not None:
             cap.release()
+
+
 
 @app.route("/")
 def home():
@@ -527,9 +568,9 @@ def admin_faculty_upload_day_post():
     target_date = datetime.date.today()
     attendance_service.set_faculty_upload_day(target_date, enabled)
     if enabled:
-        msg = "Full-day classroom photo upload is ON for today. DroidCam auto-capture is disabled."
+        msg = "Full-day classroom photo upload is ON for today. irium Webcam auto-capture is disabled."
     else:
-        msg = "DroidCam auto-capture is ON for today. Faculty must use the camera for scheduled captures."
+        msg = "irium Webcam auto-capture is ON for today. Faculty must use the camera for scheduled captures."
     return jsonify({"success": True, "enabled": enabled, "date": target_date.isoformat(), "message": msg})
 
 
@@ -1066,4 +1107,4 @@ if __name__ == "__main__":
     import webbrowser, threading, os
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         threading.Timer(1.2, lambda: webbrowser.open("http://127.0.0.1:5000/")).start()
-    app.run(debug=True)
+    app.run(debug=False)
