@@ -231,7 +231,6 @@ def run_attendance_session(period, capture_type, target_class):
 
     if cap is not None:
         cap.release()
-    cv2.destroyAllWindows()
 
     if not captured_frames:
         print("Camera not accessible: no frames from irium webcam (USB). Ensure the phone is connected and irium is active.")
